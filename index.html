@@ -45,6 +45,57 @@
             </div>
         </div>
       </header>
+
+      <!-- Main Content -->
+       <main class="container my-4 flex-grow-1">
+
+        <div id="alert-box"></div>
+
+        <section id="controls-section" class="card border-0 shadow-sm p-3 mb-4">
+            <div class="row g-3">
+                <!-- Search Input -->
+                 <div class="col-md-4">
+                    <label for="search-team" class="form-label small fw-semibold text-secondary">Search Team</label>
+                    <div class="input-group">
+                        <span class="iput-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" id="search-team" class="form-control" placeholder="e.g Manchester United, Real Madrid...">
+                    </div>
+                 </div>
+
+                 <!-- League Filtering -->
+                  <div class="col-md-4">
+                    <label for="select-league" class="form-label small fw-semibold text-secondary">League</label>
+                    <select id="select-league" class="form-select">
+                        <option value="all">All Leagues</option>
+                        <option value="English Premier League">Premier League</option>
+                        <option value="Spanish La Liga">La Liga</option>
+                        <option value="German Bundesliga">Bundesliga</option>
+                    </select>
+                  </div>
+
+                  <!-- Match Status Filtering -->
+                   <div class="col-md-4">
+                    <label for="select-status" class="form-label small fw-semibold text-secondary">Match Status</label>
+                    <select id="select-status" class="form-select">
+                        <option value="all">All Statuses</option>
+                        <option value="FT">Finished (FT)</option>
+                        <option value="NS">Upcoming (NS)</option>
+                    </select>
+                   </div>
+
+            </div>
+        </section>
+
+        <!-- Matches -->
+         <section id="match-container" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"></section>
+
+        <!-- Load More Btn -->
+        <div class="text-center my-4">
+            <button id="load-more-btn" class="btn btn-primary px-4 py-2 d-none">
+                Load More Matches
+            </button>
+        </div>  
+       </main>
     
 
 
