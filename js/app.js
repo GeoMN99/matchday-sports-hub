@@ -1,311 +1,201 @@
-// Global Application State
-let matchesList = [];
-let filteredMatches = [];
-let userPredictions = [];
-let currentPage = 1;
-const PER_PAGE = 6;
+// Global State & API Endpoint
+let matchesList = [], filteredMatches = [], userPredictions = [], currentPage = 1;
+const PER_PAGE = 6, POST_API = 'https://jsonplaceholder.typicode.com/posts';
 
-const POST_API_URL = 'https://jsonplaceholder.typicode.com/posts';
+// Helper Selector & DOM Map
+const $ = id => document.getElementById(id);
+const elements = {
+    search: $('search-team'), league: $('select-league'), status: $('select-status'),
+    container: $('match-container'), loadMore: $('load-more-btn'), backTop: $('back-to-top'),
+    alert: $('alert-box'), form: $('prediction-form'), matchDropdown: $('match-select'),
+    viewModal: $('viewPredictionsModal'), standingsModal: $('standingsModal')
+};
 
-// DOM Elements
-const searchInput = document.getElementById('search-team');
-const leagueSelect = document.getElementById('select-league');
-const statusSelect = document.getElementById('select-status');
-const matchContainer = document.getElementById('match-container');
-const loadMoreBtn = document.getElementById('load-more-btn');
-const backToTopBtn = document.getElementById('back-to-top');
-const alertBox = document.getElementById('alert-box');
-const predictionForm = document.getElementById('prediction-form');
-const matchSelectDropdown = document.getElementById('match-select');
-
-// App Initialization
+// App Initialization & Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    setupEvents();
-    loadSavedPredictions();
-    fetchMatches(leagueSelect.value || '4328');
+    userPredictions = JSON.parse(localStorage.getItem('user_predictions')) || [];
+    fetchMatches(elements.league.value);
+
+    elements.league.addEventListener('change', () => fetchMatches(elements.league.value));
+    elements.search.addEventListener('input', applyFilters);
+    elements.status.addEventListener('change', applyFilters);
+    elements.loadMore.addEventListener('click', () => { currentPage++; renderMatches(); });
+    elements.backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    elements.form.addEventListener('submit', handlePredictionSubmit);
+
+    window.addEventListener('scroll', () => elements.backTop.classList.toggle('hidden', window.scrollY <= 250));
+    elements.viewModal?.addEventListener('show.bs.modal', renderPredictions);
+    elements.standingsModal?.addEventListener('show.bs.modal', loadLeagueStandings);
+    
+    $('clear-predictions-btn')?.addEventListener('click', () => {
+        userPredictions = [];
+        localStorage.removeItem('user_predictions');
+        renderPredictions();
+        displayAlert('All predictions cleared from storage.', 'info');
+    });
 });
 
-function setupEvents() {
-    leagueSelect.addEventListener('change', () => fetchMatches(leagueSelect.value));
-    searchInput.addEventListener('input', applyFilters);
-    statusSelect.addEventListener('change', applyFilters);
-
-    loadMoreBtn.addEventListener('click', () => {
-        currentPage++;
-        renderMatches();
-    });
-
-    backToTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 250) {
-            backToTopBtn.classList.remove('hidden');
-        } else {
-            backToTopBtn.classList.add('hidden');
-        }
-    });
-
-    predictionForm.addEventListener('submit', handlePredictionSubmit);
-
-    // View Predictions Modal listener
-    const viewModalEl = document.getElementById('viewPredictionsModal');
-    if (viewModalEl) {
-        viewModalEl.addEventListener('show.bs.modal', renderPredictions);
-    }
-
-    // Clear Predictions listener
-    const clearBtn = document.getElementById('clear-predictions-btn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            userPredictions = [];
-            localStorage.removeItem('user_predictions');
-            renderPredictions();
-            displayAlert('All predictions have been cleared from local storage.', 'info');
-        });
-    }
-}
-
-function loadSavedPredictions() {
-    const stored = localStorage.getItem('user_predictions');
-    if (stored) {
-        try {
-            userPredictions = JSON.parse(stored);
-        } catch (e) {
-            userPredictions = [];
-        }
-    }
-}
-
-// Fetch Fixtures from Local JSON Dataset
+// Async Fixture Data Fetching
 async function fetchMatches(leagueId) {
     try {
         displayAlert('Loading matchday fixtures...', 'info');
-
-        const response = await fetch('js/fixtures.json');
-        if (!response.ok) throw new Error('Could not load fixtures dataset');
-
-        const allFixtures = await response.json();
-        matchesList = allFixtures.filter(item => item.idLeague === leagueId);
-
-        const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
-        displayAlert(`Loaded ${matchesList.length} fixtures for ${leagueName}.`, 'success');
-
-    } catch (err) {
-        console.error('Fetch error:', err.message);
+        const res = await fetch('js/fixtures.json');
+        const data = await res.json();
+        matchesList = data.filter(m => m.idLeague === leagueId);
+        displayAlert(`Loaded ${matchesList.length} fixtures.`, 'success');
+    } catch {
         displayAlert('Error loading fixture data.', 'danger');
     } finally {
-        populateMatchDropdown(matchesList);
+        populateMatchDropdown();
         applyFilters();
     }
 }
 
-// Multi-Criteria Search & Filter
+// Multi-Criteria Filtering
 function applyFilters() {
-    const query = searchInput.value.toLowerCase().trim();
-    const chosenStatus = statusSelect.value;
-
-    filteredMatches = matchesList.filter(item => {
-        const home = (item.strHomeTeam || '').toLowerCase();
-        const away = (item.strAwayTeam || '').toLowerCase();
-        const matchSearch = home.includes(query) || away.includes(query);
-
-        const matchStatus = item.strStatus || 'FT';
-        const statusOk = chosenStatus === 'all' || matchStatus === chosenStatus;
-
-        return matchSearch && statusOk;
+    const query = elements.search.value.toLowerCase().trim();
+    const status = elements.status.value;
+    filteredMatches = matchesList.filter(m => {
+        const matchName = `${m.strHomeTeam} ${m.strAwayTeam}`.toLowerCase();
+        return matchName.includes(query) && (status === 'all' || (m.strStatus || 'FT') === status);
     });
-
     currentPage = 1;
     renderMatches();
 }
 
-// Helper: Format Dates cleanly
-function formatDate(dateStr) {
-    if (!dateStr) return 'Scheduled';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-// Card Renderer with Team Crests & High-Contrast Styling
+// Compact Card Renderer
 function renderMatches() {
-    if (currentPage === 1) {
-        matchContainer.innerHTML = '';
+    if (currentPage === 1) elements.container.innerHTML = '';
+    if (!filteredMatches.length) {
+        elements.container.innerHTML = `<div class="col-12 text-center py-5 text-white-50">No matching fixtures found.</div>`;
+        elements.loadMore.classList.add('d-none');
+        return;
     }
 
-    if (filteredMatches.length === 0) {
-        matchContainer.innerHTML = `
-          <div class="col-12 text-center py-5 text-muted">
-            <i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-warning"></i>
-            No fixtures match your selected filters. 
-          </div>`;
-        loadMoreBtn.classList.add('d-none');
-        return;  
-    }
-
-    const itemsToShow = filteredMatches.slice(0, currentPage * PER_PAGE);
-    matchContainer.innerHTML = '';
-
-    itemsToShow.forEach(match => {
-        const isFinished = match.strStatus === 'FT' || (match.intHomeScore !== null && match.intHomeScore !== "");
-        const badgeClass = isFinished ? 'bg-success text-white' : 'bg-warning text-dark';
-        const scoreDisplay = isFinished ? `${match.intHomeScore} - ${match.intAwayScore}` : 'VS';
-        const formattedDate = formatDate(match.dateEvent);
-
-        const homeLogo = match.strHomeBadge || 'https://via.placeholder.com/40';
-        const awayLogo = match.strAwayBadge || 'https://via.placeholder.com/40';
-
-        const cardCol = document.createElement('div');
-        cardCol.className = 'col-md-6 col-lg-4 mb-4';
-        cardCol.innerHTML = `
+    const items = filteredMatches.slice(0, currentPage * PER_PAGE);
+    elements.container.innerHTML = items.map(m => {
+        const isFT = m.strStatus === 'FT' || m.intHomeScore !== null;
+        const date = m.dateEvent ? new Date(m.dateEvent).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
+        return `
+        <div class="col-md-6 col-lg-4 mb-4">
           <div class="card h-100 match-card text-white shadow">
             <div class="card-body d-flex flex-column justify-content-between p-3">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="badge bg-secondary border border-secondary text-light">${match.strLeague}</span>
-                <span class="badge ${badgeClass} fw-bold">${isFinished ? 'Finished' : 'Upcoming'}</span>
+              <div class="d-flex justify-content-between mb-3">
+                <span class="badge bg-secondary border border-secondary text-light">${m.strLeague}</span>
+                <span class="badge ${isFT ? 'bg-success' : 'bg-warning'} fw-bold">${isFT ? 'Finished' : 'Upcoming'}</span>
               </div>
-              
-              <div class="d-flex justify-content-around align-items-center my-2 text-center">
-                <div class="team-col flex-fill">
-                  <img src="${homeLogo}" alt="${match.strHomeTeam}" class="team-badge mb-2 d-block mx-auto" referrerpolicy="no-referrer">
-                  <span class="fw-bold fs-6 d-block">${match.strHomeTeam}</span>
+              <div class="d-flex justify-content-around align-items-center text-center my-2">
+                <div>
+                  <img src="${m.strHomeBadge}" alt="${m.strHomeTeam}" class="team-badge mb-1 d-block mx-auto" referrerpolicy="no-referrer">
+                  <small class="fw-bold d-block">${m.strHomeTeam}</small>
                 </div>
-                
-                <div class="px-2">
-                  <span class="badge bg-primary score-badge px-3 py-2">${scoreDisplay}</span>
-                </div>
-                
-                <div class="team-col flex-fill">
-                  <img src="${awayLogo}" alt="${match.strAwayTeam}" class="team-badge mb-2 d-block mx-auto" referrerpolicy="no-referrer">
-                  <span class="fw-bold fs-6 d-block">${match.strAwayTeam}</span>
+                <span class="badge bg-primary score-badge px-3 py-2">${isFT ? `${m.intHomeScore} - ${m.intAwayScore}` : 'VS'}</span>
+                <div>
+                  <img src="${m.strAwayBadge}" alt="${m.strAwayTeam}" class="team-badge mb-1 d-block mx-auto" referrerpolicy="no-referrer">
+                  <small class="fw-bold d-block">${m.strAwayTeam}</small>
                 </div>
               </div>
-
-              <div class="d-flex justify-content-between align-items-center border-top border-secondary pt-2 mt-3 small text-white-50">
-                <span>📍 ${match.strVenue || 'Stadium'}</span>
-                <span>📅 ${formattedDate}</span>
+              <div class="d-flex justify-content-between border-top border-secondary pt-2 mt-3 small text-white-50">
+                <span>📍 ${m.strVenue || 'Stadium'}</span><span>📅 ${date}</span>
               </div>
             </div>
           </div>
-        `;
-        matchContainer.appendChild(cardCol);        
-    });
+        </div>`;
+    }).join('');
 
-    if (itemsToShow.length < filteredMatches.length) {
-        loadMoreBtn.textContent = `Load More (${filteredMatches.length - itemsToShow.length} remaining)`;
-        loadMoreBtn.classList.remove('d-none');
-    } else {
-        loadMoreBtn.classList.add('d-none');
+    elements.loadMore.classList.toggle('d-none', items.length >= filteredMatches.length);
+    if (items.length < filteredMatches.length) {
+        elements.loadMore.textContent = `Load More (${filteredMatches.length - items.length} remaining)`;
     }
 }
 
-// Prediction Form Handler
+// Prediction Handler with Async POST & LocalStorage Sync
 async function handlePredictionSubmit(e) {
     e.preventDefault();
-
-    const submitBtn = document.getElementById('submit-btn');
-    const nameInput = document.getElementById('user-name').value;
-    const selectedFixture = matchSelectDropdown.value;
-    const scoreInput = document.getElementById('predicted-score').value;
-
+    const submitBtn = $('submit-btn');
     const payload = {
-        user: nameInput,
-        match: selectedFixture,
-        prediction: scoreInput,
+        user: $('user-name').value,
+        match: elements.matchDropdown.value,
+        prediction: $('predicted-score').value,
         createdAt: new Date().toISOString()
     };
 
     try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
-
-        const res = await fetch(POST_API_URL, {
+        const res = await fetch(POST_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)   
+            body: JSON.stringify(payload)
         });
-
-        if (!res.ok) throw new Error('Failed to post prediction');
-
-        const result = await res.json();
-        const newPrediction = { id: result.id || Date.now(), ...payload };
-        userPredictions.push(newPrediction);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        userPredictions.push({ id: data.id || Date.now(), ...payload });
         localStorage.setItem('user_predictions', JSON.stringify(userPredictions));
 
-        const modalElement = document.getElementById('predictionModal');
-        const modal = bootstrap.Modal.getInstance(modalElement);
-        modal.hide();
-
-        displayAlert(`Prediction saved for ${selectedFixture}! Total stored: ${userPredictions.length}`, 'success');
-        predictionForm.reset();
-
-    } catch (error) {
-        displayAlert(`Could not submit prediction: ${error.message}`, 'danger');
+        bootstrap.Modal.getInstance($('predictionModal')).hide();
+        displayAlert(`Prediction saved for ${payload.match}!`, 'success');
+        elements.form.reset();
+    } catch {
+        displayAlert('Failed to submit prediction.', 'danger');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Prediction';
     }
 }
 
-// Function to Render Predictions inside the View Modal
+// Render Prediction Table in Modal
 function renderPredictions() {
-    const container = document.getElementById('predictions-list-container');
-    if (!container) return;
-
-    if (!userPredictions || userPredictions.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-4 text-white-50">
-            <i class="bi bi-clipboard-x fs-1 d-block mb-2 text-warning"></i>
-            No saved predictions found in local storage. Submit a prediction first!
-          </div>`;
+    const box = $('predictions-list-container');
+    if (!box) return;
+    if (!userPredictions.length) {
+        box.innerHTML = `<div class="text-center py-4 text-white-50">No saved predictions in local storage.</div>`;
         return;
     }
-
-    container.innerHTML = `
+    box.innerHTML = `
       <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-          <thead>
-            <tr class="text-info border-secondary">
-              <th>#</th>
-              <th>User</th>
-              <th>Fixture</th>
-              <th>Predicted Score</th>
-              <th>Saved Date</th>
-            </tr>
-          </thead>
+        <table class="table table-dark table-hover align-middle mb-0">
+          <thead><tr class="text-info"><th>#</th><th>User</th><th>Match</th><th>Score</th><th>Saved</th></tr></thead>
           <tbody>
-            ${userPredictions.map((p, index) => {
-                const dateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Just now';
-                return `
-                  <tr class="border-secondary">
-                    <td class="fw-bold">${index + 1}</td>
-                    <td>${p.user || 'Anonymous'}</td>
-                    <td><span class="badge bg-secondary">${p.match}</span></td>
-                    <td><span class="badge bg-primary px-3 py-2 fs-6">${p.prediction}</span></td>
-                    <td class="small text-white-50">${dateStr}</td>
-                  </tr>
-                `;
-            }).join('')}
+            ${userPredictions.map((p, i) => `
+              <tr>
+                <td>${i + 1}</td><td>${p.user}</td>
+                <td><span class="badge bg-secondary">${p.match}</span></td>
+                <td><span class="badge bg-primary px-3 py-1">${p.prediction}</span></td>
+                <td class="small text-white-50">${new Date(p.createdAt).toLocaleDateString()}</td>
+              </tr>`).join('')}
           </tbody>
         </table>
       </div>`;
 }
 
-function populateMatchDropdown(matches) {
-    matchSelectDropdown.innerHTML = '<option value="" disabled selected>Select a fixture...</option>';
-    matches.forEach(m => {
-        const option = document.createElement('option');
-        option.value = `${m.strHomeTeam} vs ${m.strAwayTeam}`;
-        option.textContent = `${m.strHomeTeam} vs ${m.strAwayTeam} (${m.strLeague})`;
-        matchSelectDropdown.appendChild(option);
-    });
+// Render League Standings Table
+async function loadLeagueStandings() {
+    const box = $('standings-table-container');
+    const leagueId = elements.league.value;
+    const leagueName = elements.league.options[elements.league.selectedIndex].text;
+    try {
+        box.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-info"></div></div>`;
+        const res = await fetch('js/standings.json');
+        const data = await res.json();
+        const table = data[leagueId] || [];
+        box.innerHTML = `
+          <h6 class="text-info mb-3 fw-bold">${leagueName} Table</h6>
+          <div class="table-responsive"><table class="table table-dark table-hover align-middle mb-0">
+            <thead><tr class="text-secondary"><th>Pos</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th class="text-info">Pts</th></tr></thead>
+            <tbody>
+              ${table.map(s => `<tr><td class="fw-bold">${s.rank}</td><td class="fw-semibold">${s.team}</td><td>${s.played}</td><td>${s.won}</td><td>${s.draw}</td><td>${s.loss}</td><td>${s.gd}</td><td class="text-info fw-bold">${s.points}</td></tr>`).join('')}
+            </tbody>
+          </table></div>`;
+    } catch {
+        box.innerHTML = `<div class="text-center py-4 text-danger">Unable to load standings.</div>`;
+    }
 }
 
-function displayAlert(message, type) {
-    alertBox.innerHTML = `
-      <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>`;
+// Helpers
+function populateMatchDropdown() {
+    elements.matchDropdown.innerHTML = '<option value="" disabled selected>Select a fixture...</option>' + 
+        matchesList.map(m => `<option value="${m.strHomeTeam} vs ${m.strAwayTeam}">${m.strHomeTeam} vs ${m.strAwayTeam} (${m.strLeague})</option>`).join('');
+}
+
+function displayAlert(msg, type) {
+    elements.alert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
 }
