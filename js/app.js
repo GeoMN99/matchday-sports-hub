@@ -5,12 +5,13 @@ let userPredictions = [];
 let currentPage = 1;
 const PER_PAGE = 6;
 
-// Get Active Season (eg 2020-2027)
+// Get Active Season (e.g., "2026-2027")
 function getCurrentSeasonStr() {
     const now = new Date();
     const year = now.getFullYear();
-    const month = now.getFullMonth() + 1;
-    return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;// Euro season begin in Aug(month 8)
+    const month = now.getMonth() + 1; // getMonth() returns 0-11
+    // European seasons begin in August (Month 8)
+    return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 }
 
 const CURRENT_SEASON_STR = getCurrentSeasonStr();
@@ -31,7 +32,7 @@ const matchSelectDropdown = document.getElementById('match-select');
 document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     loadSavedPredictions();
-    fetchMatches(leagueSelect.value || '4328'); // Starts by fetching Pl who's id is 4328
+    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (4328)
 });
 
 // Event Listeners
@@ -49,7 +50,7 @@ function setupEvents() {
     });
 
     backToTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth '});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     window.addEventListener('scroll', () => {
@@ -65,11 +66,11 @@ function setupEvents() {
 
 // Load Predictions Stored in localStorage
 function loadSavedPredictions() {
-    const stored = localStorage.getItem('user_prediction');
+    const stored = localStorage.getItem('user_predictions');
     if (stored) {
         try {
             userPredictions = JSON.parse(stored);
-            console.log(`Loaded ${userPredictions.length} saved presdiction(s) from localStorage.`);
+            console.log(`Loaded ${userPredictions.length} saved prediction(s) from localStorage.`);
         } catch (e) {
             console.error('Failed to parse saved predictions:', e);
             userPredictions = [];
@@ -107,7 +108,7 @@ async function fetchMatches(leagueId) {
     }
 }
 
-// Multi league filtering
+// Multi-criteria Filtering (Search & Status)
 function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
     const chosenStatus = statusSelect.value;
@@ -117,10 +118,10 @@ function applyFilters() {
         const away = (item.strAwayTeam || '').toLowerCase();
         const matchSearch = home.includes(query) || away.includes(query);
 
-        const matchStatus = item.StrStatus || 'FT';
+        const matchStatus = item.strStatus || 'FT';
         const statusOk = chosenStatus === 'all' || matchStatus === chosenStatus;
 
-        return matchStatus && statusOk;
+        return matchSearch && statusOk;
     });
 
     currentPage = 1;
@@ -139,7 +140,7 @@ function renderMatches() {
             <i class="bi bi-exclamation-circle fs-2 d-block mb-2"></i>
             No fixtures match your selected filters. 
           </div>`;
-        loadMoreBtn.classList,add('d-none');
+        loadMoreBtn.classList.add('d-none');
         return;  
     }
 
@@ -148,28 +149,28 @@ function renderMatches() {
     matchContainer.innerHTML = '';
 
     itemsToShow.forEach(match => {
-        const isFinished = match.StrStatus === 'FT' || (match.intHomeScore !== null && match.intHomeScore !== "");
+        const isFinished = match.strStatus === 'FT' || (match.intHomeScore !== null && match.intHomeScore !== "");
         const badgeClass = isFinished ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis';
         const scoreDisplay = isFinished ? `${match.intHomeScore} - ${match.intAwayScore}` : 'VS';
 
         const cardCol = document.createElement('div');
         cardCol.className = 'col';
         cardCol.innerHTML = `
-         <div class="card h-100 border-0 shadow-sm match-card">
-          <div class="card-body d-flex flex-column justify-content-between">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-             <span class="badge bg-light text-secondary border small">${match.strLeague || 'League'}</span>
-             <span class="badge ${badgeClass} fw-bold">${isFinished ? 'Finished' : 'Upcoming'}</span>
+          <div class="card h-100 border-0 shadow-sm match-card">
+            <div class="card-body d-flex flex-column justify-content-between">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-light text-secondary border small">${match.strLeague || 'League'}</span>
+                <span class="badge ${badgeClass} fw-bold">${isFinished ? 'Finished' : 'Upcoming'}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center my-3 text-center fw-bold fs-5">
+                <span class="flex-fill text-start">${match.strHomeTeam}</span>
+                <span class="badge bg-primary fs-6 px-3 py-2 mx-2">${scoreDisplay}</span>
+                <span class="flex-fill text-end">${match.strAwayTeam}</span>
+              </div>
+              <div class="text-end small text-muted">
+                📅 ${match.dateEvent || 'Scheduled'}
+              </div>
             </div>
-            <div class="d-flex justify-content-between align-items-center my-3 text-center fw-bold fs-5">
-               <span class="flex-fill text-start">${match.strHomeTeam}</span>
-               <span class="badge bg-primary fs-6 px-3 py-2 mx-2">${scoreDisplay}</span>
-               <span class="flex-fill text-end">${match.strAwayTeam}</span>
-            </div>
-            <div class="text-end small text-muted">
-              📅 ${match.dateEvent || 'Scheduled'}
-            </div>
-           </div>
           </div>
         `;
         matchContainer.appendChild(cardCol);        
@@ -183,7 +184,7 @@ function renderMatches() {
     }
 }
 
-// Post Request
+// POST Request & LocalStorage Persistence
 async function handlePredictionSubmit(e) {
     e.preventDefault();
 
@@ -192,7 +193,7 @@ async function handlePredictionSubmit(e) {
     const selectedFixture = matchSelectDropdown.value;
     const scoreInput = document.getElementById('predicted-score').value;
 
-    const payLoad = {
+    const payload = {
         user: nameInput,
         match: selectedFixture,
         prediction: scoreInput,
@@ -235,21 +236,32 @@ async function handlePredictionSubmit(e) {
     }
 }
 
+// Helper: Populate Dropdown
+function populateMatchDropdown(matches) {
+    matchSelectDropdown.innerHTML = '<option value="" disabled selected>Choose a match...</option>';
+    matches.forEach(m => {
+        const option = document.createElement('option');
+        option.value = `${m.strHomeTeam} vs ${m.strAwayTeam}`;
+        option.textContent = `${m.strHomeTeam} vs ${m.strAwayTeam} (${m.strLeague})`;
+        matchSelectDropdown.appendChild(option);
+    });
+}
+
 // Helper: Inject Bootstrap Alert Banner
 function displayAlert(message, type) {
-  alertBox.innerHTML = `
-    <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
-      ${message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>`;
+    alertBox.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>`;
 }
 
 // Helper: Local Fallback Data
 function getBackupData() {
-  return [
-    { strHomeTeam: 'Arsenal', strAwayTeam: 'Chelsea', intHomeScore: 2, intAwayScore: 1, strLeague: 'English Premier League', strStatus: 'FT', dateEvent: '2026-10-20' },
-    { strHomeTeam: 'Real Madrid', strAwayTeam: 'Barcelona', intHomeScore: 3, intAwayScore: 2, strLeague: 'Spanish La Liga', strStatus: 'FT', dateEvent: '2026-10-18' },
-    { strHomeTeam: 'Bayern Munich', strAwayTeam: 'Dortmund', intHomeScore: 1, intAwayScore: 1, strLeague: 'German Bundesliga', strStatus: 'FT', dateEvent: '2026-10-15' },
-    { strHomeTeam: 'Inter Milan', strAwayTeam: 'AC Milan', intHomeScore: null, intAwayScore: null, strLeague: 'Italian Serie A', strStatus: 'NS', dateEvent: '2026-10-28' }
-  ];
+    return [
+        { strHomeTeam: 'Arsenal', strAwayTeam: 'Chelsea', intHomeScore: 2, intAwayScore: 1, strLeague: 'English Premier League', strStatus: 'FT', dateEvent: '2026-10-20' },
+        { strHomeTeam: 'Real Madrid', strAwayTeam: 'Barcelona', intHomeScore: 3, intAwayScore: 2, strLeague: 'Spanish La Liga', strStatus: 'FT', dateEvent: '2026-10-18' },
+        { strHomeTeam: 'Bayern Munich', strAwayTeam: 'Dortmund', intHomeScore: 1, intAwayScore: 1, strLeague: 'German Bundesliga', strStatus: 'FT', dateEvent: '2026-10-15' },
+        { strHomeTeam: 'Inter Milan', strAwayTeam: 'AC Milan', intHomeScore: null, intAwayScore: null, strLeague: 'Italian Serie A', strStatus: 'NS', dateEvent: '2026-10-28' }
+    ];
 }
