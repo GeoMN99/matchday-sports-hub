@@ -88,7 +88,7 @@ async function fetchMatches(leagueId) {
     let nextEvents = [];
     let fetchSuccess = false;
 
-    // Define candidate strategies for maximum network resilience
+    // Define candidate strategies for network resilience
     const fetchStrategies = [
         // Strategy 1: Direct API Call
         async (url) => {
@@ -120,8 +120,10 @@ async function fetchMatches(leagueId) {
         try {
             pastEvents = await strategy(pastTarget);
             nextEvents = await strategy(nextTarget);
-            fetchSuccess = true;
-            break; // Stop execution on first successful strategy
+            if (pastEvents.length > 0 || nextEvents.length > 0) {
+                fetchSuccess = true;
+                break;
+            }
         } catch (err) {
             console.warn('Fetch strategy failed, trying secondary route...', err.message);
         }
@@ -135,8 +137,16 @@ async function fetchMatches(leagueId) {
         displayAlert(`Loaded ${matchesList.length} live & upcoming fixtures for ${leagueName}.`, 'success');
     } else {
         console.warn('All external endpoints unavailable. Loading cached or default records.');
+        
+        // Strictly validate that cached data has items before using it
         const saved = localStorage.getItem(`cached_league_${leagueId}`);
-        matchesList = saved ? JSON.parse(saved) : getBackupData();
+        let cachedData = [];
+        if (saved) {
+            try { cachedData = JSON.parse(saved); } catch (e) { cachedData = []; }
+        }
+
+        // If cache is empty or missing, FORCE fallback to getBackupData()
+        matchesList = (Array.isArray(cachedData) && cachedData.length > 0) ? cachedData : getBackupData();
         displayAlert('Network proxy restricted. Displaying offline cached records.', 'warning');
     }
 
