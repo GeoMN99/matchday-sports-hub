@@ -31,7 +31,7 @@ const matchSelectDropdown = document.getElementById('match-select');
 document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     loadSavedPredictions();
-    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (ID: 4328)
+    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (4328)
 });
 
 // Event Listeners Setup
@@ -85,7 +85,7 @@ async function fetchMatches(leagueId) {
     try {
         displayAlert('Fetching season fixtures from sports network...', 'info');
 
-        // Helper function to fetch through proxy wrapper sequentially to avoid rate limits
+        // Helper function to fetch through proxy wrapper sequentially to prevent burst rate limits
         const fetchFromProxy = async (targetUrl) => {
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
             const res = await fetch(proxyUrl);
@@ -96,11 +96,11 @@ async function fetchMatches(leagueId) {
             return Array.isArray(parsed.events) ? parsed.events : [];
         };
 
-        // Sequential execution prevents parallel burst rate limits
+        // Sequential execution avoids parallel request triggers on CORS proxy
         const pastEvents = await fetchFromProxy(pastTarget);
         const nextEvents = await fetchFromProxy(nextTarget);
 
-        // Combine past and upcoming fixtures
+        // Combine past results and upcoming fixtures
         matchesList = [...pastEvents, ...nextEvents];
 
         if (matchesList.length === 0) {
