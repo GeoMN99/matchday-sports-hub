@@ -197,5 +197,9 @@ function populateMatchDropdown() {
 }
 
 function displayAlert(msg, type) {
-    elements.alert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    elements.alert.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+        ${msg}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()" aria-label="Close"></button>
+      </div>`;
 }
