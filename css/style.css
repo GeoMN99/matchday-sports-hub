@@ -1,69 +1,123 @@
-/* Custom Sports Hub Theme Variables */
+/* High-Energy Sports Hub Theme Variables */
 :root {
-  --primary-bg: #0f172a;
-  --card-bg: #1e293b;
-  --accent-blue: #38bdf8;
+  --bg-dark: #0b1120;
+  --card-bg: rgba(15, 23, 42, 0.85);
+  --card-border: rgba(56, 189, 248, 0.25);
+  --neon-blue: #00f0ff;
+  --neon-green: #10b981;
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
 }
 
-body {
-  background-color: #0b0f19;
-  color: #f8fafc;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Force dark midnight-indigo mesh background across HTML & Body */
+html, body {
+  background-color: #0b1120 !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(30, 27, 75, 0.6) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(14, 116, 144, 0.4) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.95) 0px, transparent 50%) !important;
+  background-attachment: fixed !important;
+  color: #f8fafc !important;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
 
-/* Stadium Hero Section (Matches your HTML class) */
+/* Force dark theme on Bootstrap cards, white containers, and modals */
+.card, 
+.bg-white, 
+.bg-light, 
+.modal-content, 
+#controls-section {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  color: #ffffff !important;
+}
+
+/* Form Input Adjustments */
+.form-control, .form-select {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid #334155 !important;
+  color: #f8fafc !important;
+  border-radius: 10px;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--neon-blue) !important;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3) !important;
+}
+
+/* Electric Stadium Hero Section */
 .hero-section {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(11, 15, 25, 0.95) 100%),
-              url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat !important;
-  background-size: cover !important;
-  background-position: center center !important;
-  background-repeat: no-repeat !important;            
-  border-bottom: 2px solid #334155;
+  position: relative;
+  background: 
+    linear-gradient(180deg, rgba(11, 17, 32, 0.75) 0%, rgba(11, 17, 32, 0.98) 100%),
+    url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat !important;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 240, 255, 0.1);
 }
 
 .hero-section .lead {
   color: #cbd5e1 !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
 }
 
-/* Match Card Entrance Animation & Hover Effects */
-@keyframes cardFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
+/* Glassmorphism Match Cards with Ambient Neon Glow */
 .match-card {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
-  border-radius: 12px;
-  animation: cardFadeIn 0.3s ease-in-out forwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background: var(--card-bg) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border) !important;
+  border-radius: 16px;
+  animation: cardFadeIn 0.35s ease-in-out forwards;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.25s ease;
 }
 
 .match-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2) !important;
-  border-color: #38bdf8 !important;
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 12px 30px -5px rgba(0, 240, 255, 0.25), 
+              0 0 15px rgba(0, 240, 255, 0.15) !important;
+  border-color: var(--neon-blue) !important;
 }
 
-/* Team Badges & Crests */
+/* Team Badges & Hover Dynamics */
 .team-badge {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+  transition: transform 0.25s ease;
 }
 
+.match-card:hover .team-badge {
+  transform: scale(1.12);
+}
+
+/* High-Contrast Score Pill */
 .score-badge {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 1px;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+}
+
+/* Glowing Status Badges */
+.badge.bg-success {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border: 1px solid #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.badge.bg-warning {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border: 1px solid #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
 }
 
 /* Floating Back to Top Button */
@@ -71,32 +125,37 @@ body {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  width: 3rem;
-  height: 3rem;
+  width: 3.2rem;
+  height: 3.2rem;
   font-size: 1.25rem;
+  background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
+  color: #000;
+  border: none;
+  border-radius: 50%;
   z-index: 1050;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.4);
+  transition: transform 0.2s ease, opacity 0.25s ease;
 }
 
 #back-to-top:hover {
-  transform: scale(1.08);
+  transform: scale(1.12);
+  color: #000;
 }
 
 .hidden {
   display: none !important;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
-/* Input & Dropdown Focus States */
-.form-control:focus,
-.form-select:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
-  background-color: #0f172a;
-  color: #fff;
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

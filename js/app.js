@@ -48,6 +48,23 @@ function setupEvents() {
     });
 
     predictionForm.addEventListener('submit', handlePredictionSubmit);
+
+    // View Predictions Modal listener
+    const viewModalEl = document.getElementById('viewPredictionsModal');
+    if (viewModalEl) {
+        viewModalEl.addEventListener('show.bs.modal', renderPredictions);
+    }
+
+    // Clear Predictions listener
+    const clearBtn = document.getElementById('clear-predictions-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            userPredictions = [];
+            localStorage.removeItem('user_predictions');
+            renderPredictions();
+            displayAlert('All predictions have been cleared from local storage.', 'info');
+        });
+    }
 }
 
 function loadSavedPredictions() {
@@ -229,6 +246,50 @@ async function handlePredictionSubmit(e) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Prediction';
     }
+}
+
+// Function to Render Predictions inside the View Modal
+function renderPredictions() {
+    const container = document.getElementById('predictions-list-container');
+    if (!container) return;
+
+    if (!userPredictions || userPredictions.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4 text-white-50">
+            <i class="bi bi-clipboard-x fs-1 d-block mb-2 text-warning"></i>
+            No saved predictions found in local storage. Submit a prediction first!
+          </div>`;
+        return;
+    }
+
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+          <thead>
+            <tr class="text-info border-secondary">
+              <th>#</th>
+              <th>User</th>
+              <th>Fixture</th>
+              <th>Predicted Score</th>
+              <th>Saved Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${userPredictions.map((p, index) => {
+                const dateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Just now';
+                return `
+                  <tr class="border-secondary">
+                    <td class="fw-bold">${index + 1}</td>
+                    <td>${p.user || 'Anonymous'}</td>
+                    <td><span class="badge bg-secondary">${p.match}</span></td>
+                    <td><span class="badge bg-primary px-3 py-2 fs-6">${p.prediction}</span></td>
+                    <td class="small text-white-50">${dateStr}</td>
+                  </tr>
+                `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
 }
 
 function populateMatchDropdown(matches) {
