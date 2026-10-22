@@ -77,56 +77,71 @@ function loadSavedPredictions() {
     }
 }
 
-// GET Request: Fetch Recent & Upcoming Matches via Sequential Proxy Wrapper
+// GET Request: Resilient Multi-Strategy Fetch Pipeline
 async function fetchMatches(leagueId) {
     const pastTarget = `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
     const nextTarget = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
 
-    try {
-        displayAlert('Fetching season fixtures from sports network...', 'info');
+    displayAlert('Fetching season fixtures from sports network...', 'info');
 
-        // Helper function to fetch through proxy wrapper sequentially to prevent burst rate limits
-        const fetchFromProxy = async (targetUrl) => {
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-            const res = await fetch(proxyUrl);
-            if (!res.ok) return [];
+    let pastEvents = [];
+    let nextEvents = [];
+    let fetchSuccess = false;
+
+    // Define candidate strategies for maximum network resilience
+    const fetchStrategies = [
+        // Strategy 1: Direct API Call
+        async (url) => {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            if (!data.contents) return [];
-            const parsed = JSON.parse(data.contents);
+            return Array.isArray(data.events) ? data.events : [];
+        },
+        // Strategy 2: CorsProxy.io
+        async (url) => {
+            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+            const data = await res.json();
+            return Array.isArray(data.events) ? data.events : [];
+        },
+        // Strategy 3: AllOrigins GET Wrapper
+        async (url) => {
+            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            if (!res.ok) throw new Error(`AllOrigins HTTP ${res.status}`);
+            const wrapper = await res.json();
+            if (!wrapper.contents) return [];
+            const parsed = JSON.parse(wrapper.contents);
             return Array.isArray(parsed.events) ? parsed.events : [];
-        };
-
-        // Sequential execution avoids parallel request triggers on CORS proxy
-        const pastEvents = await fetchFromProxy(pastTarget);
-        const nextEvents = await fetchFromProxy(nextTarget);
-
-        // Combine past results and upcoming fixtures
-        matchesList = [...pastEvents, ...nextEvents];
-
-        if (matchesList.length === 0) {
-            console.warn("Proxy returned empty results. Falling back to default records.");
-            matchesList = getBackupData();
         }
+    ];
 
-        // Cache successful response in localStorage
+    // Try network strategies sequentially until one succeeds
+    for (const strategy of fetchStrategies) {
+        try {
+            pastEvents = await strategy(pastTarget);
+            nextEvents = await strategy(nextTarget);
+            fetchSuccess = true;
+            break; // Stop execution on first successful strategy
+        } catch (err) {
+            console.warn('Fetch strategy failed, trying secondary route...', err.message);
+        }
+    }
+
+    if (fetchSuccess && (pastEvents.length > 0 || nextEvents.length > 0)) {
+        matchesList = [...pastEvents, ...nextEvents];
         localStorage.setItem(`cached_league_${leagueId}`, JSON.stringify(matchesList));
 
         const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
         displayAlert(`Loaded ${matchesList.length} live & upcoming fixtures for ${leagueName}.`, 'success');
-
-    } catch (err) {
-        console.warn(`Network fetch error (${err.message}). Loading cached records.`);
-        
-        // Fallback to cached data or hardcoded backup data
+    } else {
+        console.warn('All external endpoints unavailable. Loading cached or default records.');
         const saved = localStorage.getItem(`cached_league_${leagueId}`);
         matchesList = saved ? JSON.parse(saved) : getBackupData();
-        
-        displayAlert('Could not reach live API. Displaying offline cached records.', 'warning');
-
-    } finally {
-        populateMatchDropdown(matchesList);
-        applyFilters();
+        displayAlert('Network proxy restricted. Displaying offline cached records.', 'warning');
     }
+
+    populateMatchDropdown(matchesList);
+    applyFilters();
 }
 
 // Multi-Criteria Filtering (Search & Status)
