@@ -5,10 +5,17 @@ const PER_PAGE = 6, POST_API = 'https://jsonplaceholder.typicode.com/posts';
 // Helper Selector & DOM Map
 const $ = id => document.getElementById(id);
 const elements = {
-    search: $('search-team'), league: $('select-league'), status: $('select-status'),
-    container: $('match-container'), loadMore: $('load-more-btn'), backTop: $('back-to-top'),
-    alert: $('alert-box'), form: $('prediction-form'), matchDropdown: $('match-select'),
-    viewModal: $('viewPredictionsModal'), standingsModal: $('standingsModal')
+    search: $('search-team'),
+    league: $('select-league'),
+    status: $('select-status'),
+    container: $('match-container'),
+    loadMore: $('load-more-btn'),
+    backTop: $('back-to-top'),
+    alert: $('alert-box'),
+    form: $('prediction-form'),
+    matchDropdown: $('match-select'),
+    viewModal: $('viewPredictionsModal'),
+    standingsModal: $('standingsModal')
 };
 
 // App Initialization & Event Listeners
@@ -26,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', () => elements.backTop.classList.toggle('hidden', window.scrollY <= 250));
     elements.viewModal?.addEventListener('show.bs.modal', renderPredictions);
     elements.standingsModal?.addEventListener('show.bs.modal', loadLeagueStandings);
-    
+
     $('clear-predictions-btn')?.addEventListener('click', () => {
         userPredictions = [];
         localStorage.removeItem('user_predictions');
@@ -40,6 +47,7 @@ async function fetchMatches(leagueId) {
     try {
         displayAlert('Loading matchday fixtures...', 'info');
         const res = await fetch('js/fixtures.json');
+        if (!res.ok) throw new Error('Failed to load dataset');
         const data = await res.json();
         matchesList = data.filter(m => m.idLeague === leagueId);
         displayAlert(`Loaded ${matchesList.length} fixtures.`, 'success');
@@ -74,8 +82,8 @@ function renderMatches() {
 
     const items = filteredMatches.slice(0, currentPage * PER_PAGE);
     elements.container.innerHTML = items.map(m => {
-        const isFT = m.strStatus === 'FT' || m.intHomeScore !== null;
-        const date = m.dateEvent ? new Date(m.dateEvent).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD';
+        const isFT = m.strStatus === 'FT' || (m.intHomeScore !== null && m.intHomeScore !== "");
+        const date = m.dateEvent ? new Date(m.dateEvent).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD';
         return `
         <div class="col-md-6 col-lg-4 mb-4">
           <div class="card h-100 match-card text-white shadow">
@@ -122,23 +130,38 @@ async function handlePredictionSubmit(e) {
 
     try {
         submitBtn.disabled = true;
-        const res = await fetch(POST_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        userPredictions.push({ id: data.id || Date.now(), ...payload });
+        submitBtn.textContent = 'Submitting...';
+
+        try {
+            const res = await fetch(POST_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                payload.id = data.id;
+            }
+        } catch (apiError) {
+            console.warn('POST API unreachable, falling back to LocalStorage:', apiError);
+        }
+
+        if (!payload.id) payload.id = Date.now();
+        userPredictions.push(payload);
         localStorage.setItem('user_predictions', JSON.stringify(userPredictions));
 
-        bootstrap.Modal.getInstance($('predictionModal')).hide();
+        const modalEl = $('predictionModal');
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInstance.hide();
+
         displayAlert(`Prediction saved for ${payload.match}!`, 'success');
         elements.form.reset();
-    } catch {
+    } catch (err) {
+        console.error('Submission error:', err);
         displayAlert('Failed to submit prediction.', 'danger');
     } finally {
         submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Prediction';
     }
 }
 
