@@ -77,34 +77,34 @@ function loadSavedPredictions() {
     }
 }
 
-// GET Request: Fetch Recent & Upcoming Matches
+// GET Request: Fetch Recent & Upcoming Matches via Sequential Proxy Wrapper
 async function fetchMatches(leagueId) {
-    const pastEndpoint = `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
-    const nextEndpoint = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
+    const pastTarget = `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
+    const nextTarget = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
 
     try {
         displayAlert('Fetching season fixtures from sports network...', 'info');
 
-        // Concurrent fetch for both past and future match fixtures
-        const [pastRes, nextRes] = await Promise.all([
-            fetch(pastEndpoint),
-            fetch(nextEndpoint)
-        ]);
+        // Helper function to fetch through proxy wrapper sequentially to avoid rate limits
+        const fetchFromProxy = async (targetUrl) => {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+            const res = await fetch(proxyUrl);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (!data.contents) return [];
+            const parsed = JSON.parse(data.contents);
+            return Array.isArray(parsed.events) ? parsed.events : [];
+        };
 
-        if (!pastRes.ok || !nextRes.ok) {
-            throw new Error(`HTTP Status: ${pastRes.status || nextRes.status}`);
-        }
-
-        const pastData = await pastRes.json();
-        const nextData = await nextRes.json();
-
-        const pastEvents = (pastData && pastData.events) ? pastData.events : [];
-        const nextEvents = (nextData && nextData.events) ? nextData.events : [];
+        // Sequential execution prevents parallel burst rate limits
+        const pastEvents = await fetchFromProxy(pastTarget);
+        const nextEvents = await fetchFromProxy(nextTarget);
 
         // Combine past and upcoming fixtures
         matchesList = [...pastEvents, ...nextEvents];
 
         if (matchesList.length === 0) {
+            console.warn("Proxy returned empty results. Falling back to default records.");
             matchesList = getBackupData();
         }
 
