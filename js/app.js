@@ -114,7 +114,10 @@ async function handlePredictionSubmit(e) {
   const match = $('match-select')?.value;
   const score = $('predicted-score')?.value.trim();
 
-  if (!name || !match || !score) return displayAlert('Please fill out all fields.', 'warning');
+  if (!name || !match || !score) {
+    alert('Please fill out all fields (Name, Match, and Predicted Score).');
+    return;
+  }
 
   const payload = { id: Date.now(), user: name, match: match, prediction: score, createdAt: new Date().toISOString() };
   if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
@@ -126,15 +129,19 @@ async function handlePredictionSubmit(e) {
   // Background POST attempt
   fetch(POST_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
 
-  // Close modal safely
-  const modalEl = $('predictionModal');
-  if (modalEl && window.bootstrap) {
-    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).hide();
+  // Reset form
+  $('prediction-form')?.reset();
+
+  // Close modal reliably by triggering close button click
+  const closeBtn = document.querySelector('#predictionModal .btn-close');
+  if (closeBtn) {
+    closeBtn.click();
+  } else if (window.bootstrap) {
+    bootstrap.Modal.getOrCreateInstance($('predictionModal')).hide();
   }
 
-  $('prediction-form')?.reset();
-  displayAlert(`Prediction saved for ${match}!`, 'success');
   if (btn) { btn.disabled = false; btn.textContent = 'Submit Prediction'; }
+  displayAlert(`Prediction saved for ${match}!`, 'success');
 }
 
 function renderPredictions() {
