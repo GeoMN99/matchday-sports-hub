@@ -104,14 +104,14 @@ function applyFilters() {
     renderMatches();
 }
 
-// Helper: Format Dates to Clean Display (e.g. Sun, Sep 6, 2026)
+// Helper: Format Dates cleanly
 function formatDate(dateStr) {
     if (!dateStr) return 'Scheduled';
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// Card Renderer with Team Crests & Badges
+// Card Renderer with Team Crests & High-Contrast Styling
 function renderMatches() {
     if (currentPage === 1) {
         matchContainer.innerHTML = '';
@@ -151,7 +151,7 @@ function renderMatches() {
               
               <div class="d-flex justify-content-around align-items-center my-2 text-center">
                 <div class="team-col flex-fill">
-                  <img src="${homeLogo}" alt="${match.strHomeTeam}" class="team-badge mb-2 d-block mx-auto">
+                  <img src="${homeLogo}" alt="${match.strHomeTeam}" class="team-badge mb-2 d-block mx-auto" referrerpolicy="no-referrer">
                   <span class="fw-bold fs-6 d-block">${match.strHomeTeam}</span>
                 </div>
                 
@@ -160,12 +160,12 @@ function renderMatches() {
                 </div>
                 
                 <div class="team-col flex-fill">
-                  <img src="${awayLogo}" alt="${match.strAwayTeam}" class="team-badge mb-2 d-block mx-auto">
+                  <img src="${awayLogo}" alt="${match.strAwayTeam}" class="team-badge mb-2 d-block mx-auto" referrerpolicy="no-referrer">
                   <span class="fw-bold fs-6 d-block">${match.strAwayTeam}</span>
                 </div>
               </div>
 
-              <div class="d-flex justify-content-between align-items-center border-top border-secondary pt-2 mt-3 small text-muted">
+              <div class="d-flex justify-content-between align-items-center border-top border-secondary pt-2 mt-3 small text-white-50">
                 <span>📍 ${match.strVenue || 'Stadium'}</span>
                 <span>📅 ${formattedDate}</span>
               </div>
