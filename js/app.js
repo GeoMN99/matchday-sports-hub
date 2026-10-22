@@ -1,6 +1,6 @@
 // Global State
 let matchesList = [];
-let filterdmatches = [];
+let filteredMatches = [];
 let userPredictions = [];
 let currentPage = 1;
 const PER_PAGE = 6;
@@ -105,4 +105,24 @@ async function fetchMatches(leagueId) {
         populateMatchDropdown(matchesList);
         applyFilters();
     }
+}
+
+// Multi league filtering
+function applyFilters() {
+    const query = searchInput.value.toLowerCase().trim();
+    const chosenStatus = statusSelect.value;
+
+    filteredMatches = matchesList.filter(item => {
+        const home = (item.strHomeTeam || '').toLowerCase();
+        const away = (item.strAwayTeam || '').toLowerCase();
+        const matchSearch = home.includes(query) || away.includes(query);
+
+        const matchStatus = item.StrStatus || 'FT';
+        const statusOk = chosenStatus === 'all' || matchStatus === chosenStatus;
+
+        return matchStatus && statusOk;
+    });
+
+    currentPage = 1;
+    renderMatches();
 }
