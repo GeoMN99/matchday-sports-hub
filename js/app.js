@@ -76,3 +76,33 @@ function loadSavedPredictions() {
         }
     }
 }
+
+// Fetching data from API
+async function fetchMatches(leagueId) {
+    const endpoint = `https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${leagueId}&s=${CURRENT_SEASON_STR}`;
+
+    try {
+        displayAlert('Fetching season fixtures from sports network...', 'info');
+
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error('Failed to reach sports network');
+
+        const data = await response.json();
+        matchesList = (data && data.events) ? data.events : getBackupData();
+
+        localStorage.setItem(`cached_league_${leagueId}`, JSON.stringify(matchesList));
+
+        const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
+        displayAlert(`Loaded ${matchesList.length} fixtures for ${leagueName} (${CURRENT_SEASON_STR} season).`, 'success');
+
+    } catch (err) {
+        console.log(`API call failed for league ${leagueId}, checking cache:`, err.message);
+        const saved = localStorage.getItem(`cached_league_${leagueId}`);
+        matchesList = saved ? JSON.parse(saved) : getBackupData();
+        displayAlert('Could not fetch live API data. Displaying cached records.', 'warning');
+
+    } finally {
+        populateMatchDropdown(matchesList);
+        applyFilters();
+    }
+}
