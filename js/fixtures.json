@@ -1,0 +1,11 @@
+[
+  { "strHomeTeam": "Arsenal", "strAwayTeam": "Chelsea", "intHomeScore": "2", "intAwayScore": "1", "strLeague": "English Premier League", "idLeague": "4328", "strStatus": "FT", "dateEvent": "2026-10-20" },
+  { "strHomeTeam": "Manchester City", "strAwayTeam": "Liverpool", "intHomeScore": "3", "intAwayScore": "2", "strLeague": "English Premier League", "idLeague": "4328", "strStatus": "FT", "dateEvent": "2026-10-18" },
+  { "strHomeTeam": "Tottenham", "strAwayTeam": "Manchester United", "intHomeScore": null, "intAwayScore": null, "strLeague": "English Premier League", "idLeague": "4328", "strStatus": "NS", "dateEvent": "2026-10-28" },
+  { "strHomeTeam": "Aston Villa", "strAwayTeam": "Newcastle", "intHomeScore": null, "intAwayScore": null, "strLeague": "English Premier League", "idLeague": "4328", "strStatus": "NS", "dateEvent": "2026-10-29" },
+  { "strHomeTeam": "Real Madrid", "strAwayTeam": "Barcelona", "intHomeScore": "3", "intAwayScore": "1", "strLeague": "Spanish La Liga", "idLeague": "4335", "strStatus": "FT", "dateEvent": "2026-10-19" },
+  { "strHomeTeam": "Atletico Madrid", "strAwayTeam": "Sevilla", "intHomeScore": null, "intAwayScore": null, "strLeague": "Spanish La Liga", "idLeague": "4335", "strStatus": "NS", "dateEvent": "2026-10-30" },
+  { "strHomeTeam": "Bayern Munich", "strAwayTeam": "Dortmund", "intHomeScore": "2", "intAwayScore": "2", "strLeague": "German Bundesliga", "idLeague": "4331", "strStatus": "FT", "dateEvent": "2026-10-15" },
+  { "strHomeTeam": "Inter Milan", "strAwayTeam": "AC Milan", "intHomeScore": null, "intAwayScore": null, "strLeague": "Italian Serie A", "idLeague": "4332", "strStatus": "NS", "dateEvent": "2026-10-31" },
+  { "strHomeTeam": "PSG", "strAwayTeam": "Real Madrid", "intHomeScore": "1", "intAwayScore": "2", "strLeague": "UEFA Champions League", "idLeague": "4480", "strStatus": "FT", "dateEvent": "2026-10-10" }
+]

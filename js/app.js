@@ -5,15 +5,6 @@ let userPredictions = [];
 let currentPage = 1;
 const PER_PAGE = 6;
 
-// Compute Active European Season (e.g., "2026-2027")
-function getCurrentSeasonStr() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1; // getMonth() returns 0-11
-    return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
-}
-
-const CURRENT_SEASON_STR = getCurrentSeasonStr();
 const POST_API_URL = 'https://jsonplaceholder.typicode.com/posts';
 
 // DOM Element References
@@ -31,7 +22,7 @@ const matchSelectDropdown = document.getElementById('match-select');
 document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     loadSavedPredictions();
-    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (4328)
+    fetchMatches(leagueSelect.value || '4328');
 });
 
 // Event Listeners Setup
@@ -77,81 +68,29 @@ function loadSavedPredictions() {
     }
 }
 
-// GET Request: Resilient Multi-Strategy Fetch Pipeline
+// GET Request: Fetch Matches from Local Static Data
 async function fetchMatches(leagueId) {
-    const pastTarget = `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
-    const nextTarget = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
+    try {
+        displayAlert('Loading matchday fixtures...', 'info');
 
-    displayAlert('Fetching season fixtures from sports network...', 'info');
+        const response = await fetch('js/fixtures.json');
+        if (!response.ok) throw new Error('Could not load local fixtures file');
 
-    let pastEvents = [];
-    let nextEvents = [];
-    let fetchSuccess = false;
+        const allFixtures = await response.json();
 
-    // Define candidate strategies for network resilience
-    const fetchStrategies = [
-        // Strategy 1: Direct API Call
-        async (url) => {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            return Array.isArray(data.events) ? data.events : [];
-        },
-        // Strategy 2: CorsProxy.io
-        async (url) => {
-            const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-            if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-            const data = await res.json();
-            return Array.isArray(data.events) ? data.events : [];
-        },
-        // Strategy 3: AllOrigins GET Wrapper
-        async (url) => {
-            const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-            if (!res.ok) throw new Error(`AllOrigins HTTP ${res.status}`);
-            const wrapper = await res.json();
-            if (!wrapper.contents) return [];
-            const parsed = JSON.parse(wrapper.contents);
-            return Array.isArray(parsed.events) ? parsed.events : [];
-        }
-    ];
-
-    // Try network strategies sequentially until one succeeds
-    for (const strategy of fetchStrategies) {
-        try {
-            pastEvents = await strategy(pastTarget);
-            nextEvents = await strategy(nextTarget);
-            if (pastEvents.length > 0 || nextEvents.length > 0) {
-                fetchSuccess = true;
-                break;
-            }
-        } catch (err) {
-            console.warn('Fetch strategy failed, trying secondary route...', err.message);
-        }
-    }
-
-    if (fetchSuccess && (pastEvents.length > 0 || nextEvents.length > 0)) {
-        matchesList = [...pastEvents, ...nextEvents];
-        localStorage.setItem(`cached_league_${leagueId}`, JSON.stringify(matchesList));
+        // Filter fixtures matching selected league ID
+        matchesList = allFixtures.filter(item => item.idLeague === leagueId);
 
         const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
-        displayAlert(`Loaded ${matchesList.length} live & upcoming fixtures for ${leagueName}.`, 'success');
-    } else {
-        console.warn('All external endpoints unavailable. Loading cached or default records.');
-        
-        // Strictly validate that cached data has items before using it
-        const saved = localStorage.getItem(`cached_league_${leagueId}`);
-        let cachedData = [];
-        if (saved) {
-            try { cachedData = JSON.parse(saved); } catch (e) { cachedData = []; }
-        }
+        displayAlert(`Loaded ${matchesList.length} fixtures for ${leagueName}.`, 'success');
 
-        // If cache is empty or missing, FORCE fallback to getBackupData()
-        matchesList = (Array.isArray(cachedData) && cachedData.length > 0) ? cachedData : getBackupData();
-        displayAlert('Network proxy restricted. Displaying offline cached records.', 'warning');
+    } catch (err) {
+        console.error('Fetch error:', err.message);
+        displayAlert('Error loading fixture data.', 'danger');
+    } finally {
+        populateMatchDropdown(matchesList);
+        applyFilters();
     }
-
-    populateMatchDropdown(matchesList);
-    applyFilters();
 }
 
 // Multi-Criteria Filtering (Search & Status)
@@ -300,14 +239,4 @@ function displayAlert(message, type) {
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>`;
-}
-
-// Helper: Local Fallback Data
-function getBackupData() {
-    return [
-        { strHomeTeam: 'Arsenal', strAwayTeam: 'Chelsea', intHomeScore: 2, intAwayScore: 1, strLeague: 'English Premier League', strStatus: 'FT', dateEvent: '2026-10-20' },
-        { strHomeTeam: 'Real Madrid', strAwayTeam: 'Barcelona', intHomeScore: 3, intAwayScore: 2, strLeague: 'Spanish La Liga', strStatus: 'FT', dateEvent: '2026-10-18' },
-        { strHomeTeam: 'Bayern Munich', strAwayTeam: 'Dortmund', intHomeScore: 1, intAwayScore: 1, strLeague: 'German Bundesliga', strStatus: 'FT', dateEvent: '2026-10-15' },
-        { strHomeTeam: 'Inter Milan', strAwayTeam: 'AC Milan', intHomeScore: null, intAwayScore: null, strLeague: 'Italian Serie A', strStatus: 'NS', dateEvent: '2026-10-28' }
-    ];
 }
