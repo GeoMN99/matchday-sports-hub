@@ -182,3 +182,74 @@ function renderMatches() {
         loadMoreBtn.classList.add('d-none');
     }
 }
+
+// Post Request
+async function handlePredictionSubmit(e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById('submit-btn');
+    const nameInput = document.getElementById('user-name').value;
+    const selectedFixture = matchSelectDropdown.value;
+    const scoreInput = document.getElementById('predicted-score').value;
+
+    const payLoad = {
+        user: nameInput,
+        match: selectedFixture,
+        prediction: scoreInput,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+
+        const res = await fetch(POST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)   
+        });
+
+        if (!res.ok) throw new Error('Failed to post prediction to server');
+
+        const result = await res.json();
+
+        const newPrediction = {
+            id: result.id || Date.now(),
+            ...payload
+        };
+        userPredictions.push(newPrediction);
+        localStorage.setItem('user_predictions', JSON.stringify(userPredictions));
+
+        const modalElement = document.getElementById('predictionModal');
+        const modal = bootstrap.Modal.getInstance(modalElement);
+        modal.hide();
+
+        displayAlert(`Prediction saved for ${selectedFixture}! Total stored: ${userPredictions.length}`, 'success');
+        predictionForm.reset();
+
+    } catch (error) {
+        displayAlert(`Could not submit prediction: ${error.message}`, 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Prediction';
+    }
+}
+
+// Helper: Inject Bootstrap Alert Banner
+function displayAlert(message, type) {
+  alertBox.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+}
+
+// Helper: Local Fallback Data
+function getBackupData() {
+  return [
+    { strHomeTeam: 'Arsenal', strAwayTeam: 'Chelsea', intHomeScore: 2, intAwayScore: 1, strLeague: 'English Premier League', strStatus: 'FT', dateEvent: '2026-10-20' },
+    { strHomeTeam: 'Real Madrid', strAwayTeam: 'Barcelona', intHomeScore: 3, intAwayScore: 2, strLeague: 'Spanish La Liga', strStatus: 'FT', dateEvent: '2026-10-18' },
+    { strHomeTeam: 'Bayern Munich', strAwayTeam: 'Dortmund', intHomeScore: 1, intAwayScore: 1, strLeague: 'German Bundesliga', strStatus: 'FT', dateEvent: '2026-10-15' },
+    { strHomeTeam: 'Inter Milan', strAwayTeam: 'AC Milan', intHomeScore: null, intAwayScore: null, strLeague: 'Italian Serie A', strStatus: 'NS', dateEvent: '2026-10-28' }
+  ];
+}
