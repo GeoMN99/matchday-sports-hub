@@ -1,14 +1,14 @@
-/*Hero header*/
+/* Hero Header Styling */
 .hero-section {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   border-bottom: 1px solid #334155;
 }
 
 .hero-section .lead {
-  color: #94a3b8;
+  color: #94a3b8 !important;
 }
 
-/* Match Cards Entrance Animation */
+/* Match Card Entrance Animation & Hover Effects */
 @keyframes cardFadeIn {
   from {
     opacity: 0;
@@ -22,30 +22,55 @@
 
 .match-card {
   animation: cardFadeIn 0.3s ease-in-out forwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border-radius: 0.75rem;
 }
 
 .match-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08) !important;
+  border-color: #cbd5e1 !important;
 }
 
-/* Floating Back to top btn */
+/* Floating Back to Top Button */
 #back-to-top {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  width: 2.8rem;
-  height: 2.8rem;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.25rem;
   z-index: 1050;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.2s ease;
+}
+
+#back-to-top:hover {
+  transform: scale(1.08);
 }
 
 #back-to-top.hidden {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Input & Dropdown Focus States */
+.form-control:focus,
+.form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Custom Status Badge Styling */
+.badge.bg-success-subtle {
+  background-color: #d1e7dd !important;
+  color: #0f5132 !important;
+}
+
+.badge.bg-warning-subtle {
+  background-color: #fff3cd !important;
+  color: #664d03 !important;
 }
