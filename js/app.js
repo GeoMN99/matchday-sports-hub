@@ -126,3 +126,59 @@ function applyFilters() {
     currentPage = 1;
     renderMatches();
 }
+
+// Matches Rendering
+function renderMatches() {
+    if (currentPage === 1) {
+        matchContainer.innerHTML = '';
+    }
+
+    if (filteredMatches.length === 0) {
+        matchContainer.innerHTML = `
+          <div class="col-12 text-center py-5 text-muted">
+            <i class="bi bi-exclamation-circle fs-2 d-block mb-2"></i>
+            No fixtures match your selected filters. 
+          </div>`;
+        loadMoreBtn.classList,add('d-none');
+        return;  
+    }
+
+    const itemsToShow = filteredMatches.slice(0, currentPage * PER_PAGE);
+
+    matchContainer.innerHTML = '';
+
+    itemsToShow.forEach(match => {
+        const isFinished = match.StrStatus === 'FT' || (match.intHomeScore !== null && match.intHomeScore !== "");
+        const badgeClass = isFinished ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis';
+        const scoreDisplay = isFinished ? `${match.intHomeScore} - ${match.intAwayScore}` : 'VS';
+
+        const cardCol = document.createElement('div');
+        cardCol.className = 'col';
+        cardCol.innerHTML = `
+         <div class="card h-100 border-0 shadow-sm match-card">
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+             <span class="badge bg-light text-secondary border small">${match.strLeague || 'League'}</span>
+             <span class="badge ${badgeClass} fw-bold">${isFinished ? 'Finished' : 'Upcoming'}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center my-3 text-center fw-bold fs-5">
+               <span class="flex-fill text-start">${match.strHomeTeam}</span>
+               <span class="badge bg-primary fs-6 px-3 py-2 mx-2">${scoreDisplay}</span>
+               <span class="flex-fill text-end">${match.strAwayTeam}</span>
+            </div>
+            <div class="text-end small text-muted">
+              📅 ${match.dateEvent || 'Scheduled'}
+            </div>
+           </div>
+          </div>
+        `;
+        matchContainer.appendChild(cardCol);        
+    });
+
+    if (itemsToShow.length < filteredMatches.length) {
+        loadMoreBtn.textContent = `Load More (${filteredMatches.length - itemsToShow.length} left)`;
+        loadMoreBtn.classList.remove('d-none');
+    } else {
+        loadMoreBtn.classList.add('d-none');
+    }
+}
