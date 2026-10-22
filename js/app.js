@@ -1,16 +1,15 @@
-// Global State
+// Global Application State
 let matchesList = [];
 let filteredMatches = [];
 let userPredictions = [];
 let currentPage = 1;
 const PER_PAGE = 6;
 
-// Get Active Season (e.g., "2026-2027")
+// Compute Active European Season (e.g., "2026-2027")
 function getCurrentSeasonStr() {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1; // getMonth() returns 0-11
-    // European seasons begin in August (Month 8)
     return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
 }
 
@@ -28,14 +27,14 @@ const alertBox = document.getElementById('alert-box');
 const predictionForm = document.getElementById('prediction-form');
 const matchSelectDropdown = document.getElementById('match-select');
 
-// App Init
+// App Initialization
 document.addEventListener('DOMContentLoaded', () => {
     setupEvents();
     loadSavedPredictions();
-    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (4328)
+    fetchMatches(leagueSelect.value || '4328'); // Default: Premier League (ID: 4328)
 });
 
-// Event Listeners
+// Event Listeners Setup
 function setupEvents() {
     leagueSelect.addEventListener('change', () => {
         fetchMatches(leagueSelect.value);
@@ -78,29 +77,51 @@ function loadSavedPredictions() {
     }
 }
 
-// Fetching data from API
+// GET Request: Fetch Recent & Upcoming Matches
 async function fetchMatches(leagueId) {
-    const endpoint = `https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=${leagueId}&s=${CURRENT_SEASON_STR}`;
+    const pastEndpoint = `https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${leagueId}`;
+    const nextEndpoint = `https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${leagueId}`;
 
     try {
         displayAlert('Fetching season fixtures from sports network...', 'info');
 
-        const response = await fetch(endpoint);
-        if (!response.ok) throw new Error('Failed to reach sports network');
+        // Concurrent fetch for both past and future match fixtures
+        const [pastRes, nextRes] = await Promise.all([
+            fetch(pastEndpoint),
+            fetch(nextEndpoint)
+        ]);
 
-        const data = await response.json();
-        matchesList = (data && data.events) ? data.events : getBackupData();
+        if (!pastRes.ok || !nextRes.ok) {
+            throw new Error(`HTTP Status: ${pastRes.status || nextRes.status}`);
+        }
 
+        const pastData = await pastRes.json();
+        const nextData = await nextRes.json();
+
+        const pastEvents = (pastData && pastData.events) ? pastData.events : [];
+        const nextEvents = (nextData && nextData.events) ? nextData.events : [];
+
+        // Combine past and upcoming fixtures
+        matchesList = [...pastEvents, ...nextEvents];
+
+        if (matchesList.length === 0) {
+            matchesList = getBackupData();
+        }
+
+        // Cache successful response in localStorage
         localStorage.setItem(`cached_league_${leagueId}`, JSON.stringify(matchesList));
 
         const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
-        displayAlert(`Loaded ${matchesList.length} fixtures for ${leagueName} (${CURRENT_SEASON_STR} season).`, 'success');
+        displayAlert(`Loaded ${matchesList.length} live & upcoming fixtures for ${leagueName}.`, 'success');
 
     } catch (err) {
-        console.log(`API call failed for league ${leagueId}, checking cache:`, err.message);
+        console.warn(`Network fetch error (${err.message}). Loading cached records.`);
+        
+        // Fallback to cached data or hardcoded backup data
         const saved = localStorage.getItem(`cached_league_${leagueId}`);
         matchesList = saved ? JSON.parse(saved) : getBackupData();
-        displayAlert('Could not fetch live API data. Displaying cached records.', 'warning');
+        
+        displayAlert('Could not reach live API. Displaying offline cached records.', 'warning');
 
     } finally {
         populateMatchDropdown(matchesList);
@@ -108,7 +129,7 @@ async function fetchMatches(leagueId) {
     }
 }
 
-// Multi-criteria Filtering (Search & Status)
+// Multi-Criteria Filtering (Search & Status)
 function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
     const chosenStatus = statusSelect.value;
@@ -128,7 +149,7 @@ function applyFilters() {
     renderMatches();
 }
 
-// Matches Rendering
+// Dynamic Card Rendering & Batch Pagination
 function renderMatches() {
     if (currentPage === 1) {
         matchContainer.innerHTML = '';
