@@ -7,7 +7,7 @@ const PER_PAGE = 6;
 
 const POST_API_URL = 'https://jsonplaceholder.typicode.com/posts';
 
-// DOM Element References
+// DOM Elements
 const searchInput = document.getElementById('search-team');
 const leagueSelect = document.getElementById('select-league');
 const statusSelect = document.getElementById('select-status');
@@ -25,12 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchMatches(leagueSelect.value || '4328');
 });
 
-// Event Listeners Setup
 function setupEvents() {
-    leagueSelect.addEventListener('change', () => {
-        fetchMatches(leagueSelect.value);
-    });
-
+    leagueSelect.addEventListener('change', () => fetchMatches(leagueSelect.value));
     searchInput.addEventListener('input', applyFilters);
     statusSelect.addEventListener('change', applyFilters);
 
@@ -54,31 +50,26 @@ function setupEvents() {
     predictionForm.addEventListener('submit', handlePredictionSubmit);
 }
 
-// Load Predictions Stored in localStorage
 function loadSavedPredictions() {
     const stored = localStorage.getItem('user_predictions');
     if (stored) {
         try {
             userPredictions = JSON.parse(stored);
-            console.log(`Loaded ${userPredictions.length} saved prediction(s) from localStorage.`);
         } catch (e) {
-            console.error('Failed to parse saved predictions:', e);
             userPredictions = [];
         }
     }
 }
 
-// GET Request: Fetch Matches from Local Static Data
+// Fetch Fixtures from Local JSON Dataset
 async function fetchMatches(leagueId) {
     try {
         displayAlert('Loading matchday fixtures...', 'info');
 
         const response = await fetch('js/fixtures.json');
-        if (!response.ok) throw new Error('Could not load local fixtures file');
+        if (!response.ok) throw new Error('Could not load fixtures dataset');
 
         const allFixtures = await response.json();
-
-        // Filter fixtures matching selected league ID
         matchesList = allFixtures.filter(item => item.idLeague === leagueId);
 
         const leagueName = leagueSelect.options[leagueSelect.selectedIndex]?.text || 'selected league';
@@ -93,7 +84,7 @@ async function fetchMatches(leagueId) {
     }
 }
 
-// Multi-Criteria Filtering (Search & Status)
+// Multi-Criteria Search & Filter
 function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
     const chosenStatus = statusSelect.value;
@@ -113,7 +104,14 @@ function applyFilters() {
     renderMatches();
 }
 
-// Dynamic Card Rendering & Batch Pagination
+// Helper: Format Dates to Clean Display (e.g. Sun, Sep 6, 2026)
+function formatDate(dateStr) {
+    if (!dateStr) return 'Scheduled';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Card Renderer with Team Crests & Badges
 function renderMatches() {
     if (currentPage === 1) {
         matchContainer.innerHTML = '';
@@ -122,7 +120,7 @@ function renderMatches() {
     if (filteredMatches.length === 0) {
         matchContainer.innerHTML = `
           <div class="col-12 text-center py-5 text-muted">
-            <i class="bi bi-exclamation-circle fs-2 d-block mb-2"></i>
+            <i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-warning"></i>
             No fixtures match your selected filters. 
           </div>`;
         loadMoreBtn.classList.add('d-none');
@@ -130,30 +128,46 @@ function renderMatches() {
     }
 
     const itemsToShow = filteredMatches.slice(0, currentPage * PER_PAGE);
-
     matchContainer.innerHTML = '';
 
     itemsToShow.forEach(match => {
         const isFinished = match.strStatus === 'FT' || (match.intHomeScore !== null && match.intHomeScore !== "");
-        const badgeClass = isFinished ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis';
+        const badgeClass = isFinished ? 'bg-success text-white' : 'bg-warning text-dark';
         const scoreDisplay = isFinished ? `${match.intHomeScore} - ${match.intAwayScore}` : 'VS';
+        const formattedDate = formatDate(match.dateEvent);
+
+        const homeLogo = match.strHomeBadge || 'https://via.placeholder.com/40';
+        const awayLogo = match.strAwayBadge || 'https://via.placeholder.com/40';
 
         const cardCol = document.createElement('div');
-        cardCol.className = 'col';
+        cardCol.className = 'col-md-6 col-lg-4 mb-4';
         cardCol.innerHTML = `
-          <div class="card h-100 border-0 shadow-sm match-card">
-            <div class="card-body d-flex flex-column justify-content-between">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="badge bg-light text-secondary border small">${match.strLeague || 'League'}</span>
+          <div class="card h-100 match-card text-white shadow">
+            <div class="card-body d-flex flex-column justify-content-between p-3">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-secondary border border-secondary text-light">${match.strLeague}</span>
                 <span class="badge ${badgeClass} fw-bold">${isFinished ? 'Finished' : 'Upcoming'}</span>
               </div>
-              <div class="d-flex justify-content-between align-items-center my-3 text-center fw-bold fs-5">
-                <span class="flex-fill text-start">${match.strHomeTeam}</span>
-                <span class="badge bg-primary fs-6 px-3 py-2 mx-2">${scoreDisplay}</span>
-                <span class="flex-fill text-end">${match.strAwayTeam}</span>
+              
+              <div class="d-flex justify-content-around align-items-center my-2 text-center">
+                <div class="team-col flex-fill">
+                  <img src="${homeLogo}" alt="${match.strHomeTeam}" class="team-badge mb-2 d-block mx-auto">
+                  <span class="fw-bold fs-6 d-block">${match.strHomeTeam}</span>
+                </div>
+                
+                <div class="px-2">
+                  <span class="badge bg-primary score-badge px-3 py-2">${scoreDisplay}</span>
+                </div>
+                
+                <div class="team-col flex-fill">
+                  <img src="${awayLogo}" alt="${match.strAwayTeam}" class="team-badge mb-2 d-block mx-auto">
+                  <span class="fw-bold fs-6 d-block">${match.strAwayTeam}</span>
+                </div>
               </div>
-              <div class="text-end small text-muted">
-                📅 ${match.dateEvent || 'Scheduled'}
+
+              <div class="d-flex justify-content-between align-items-center border-top border-secondary pt-2 mt-3 small text-muted">
+                <span>📍 ${match.strVenue || 'Stadium'}</span>
+                <span>📅 ${formattedDate}</span>
               </div>
             </div>
           </div>
@@ -162,14 +176,14 @@ function renderMatches() {
     });
 
     if (itemsToShow.length < filteredMatches.length) {
-        loadMoreBtn.textContent = `Load More (${filteredMatches.length - itemsToShow.length} left)`;
+        loadMoreBtn.textContent = `Load More (${filteredMatches.length - itemsToShow.length} remaining)`;
         loadMoreBtn.classList.remove('d-none');
     } else {
         loadMoreBtn.classList.add('d-none');
     }
 }
 
-// POST Request & LocalStorage Persistence
+// Prediction Form Handler
 async function handlePredictionSubmit(e) {
     e.preventDefault();
 
@@ -187,7 +201,7 @@ async function handlePredictionSubmit(e) {
 
     try {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Sending...';
+        submitBtn.textContent = 'Submitting...';
 
         const res = await fetch(POST_API_URL, {
             method: 'POST',
@@ -195,14 +209,10 @@ async function handlePredictionSubmit(e) {
             body: JSON.stringify(payload)   
         });
 
-        if (!res.ok) throw new Error('Failed to post prediction to server');
+        if (!res.ok) throw new Error('Failed to post prediction');
 
         const result = await res.json();
-
-        const newPrediction = {
-            id: result.id || Date.now(),
-            ...payload
-        };
+        const newPrediction = { id: result.id || Date.now(), ...payload };
         userPredictions.push(newPrediction);
         localStorage.setItem('user_predictions', JSON.stringify(userPredictions));
 
@@ -221,9 +231,8 @@ async function handlePredictionSubmit(e) {
     }
 }
 
-// Helper: Populate Dropdown
 function populateMatchDropdown(matches) {
-    matchSelectDropdown.innerHTML = '<option value="" disabled selected>Choose a match...</option>';
+    matchSelectDropdown.innerHTML = '<option value="" disabled selected>Select a fixture...</option>';
     matches.forEach(m => {
         const option = document.createElement('option');
         option.value = `${m.strHomeTeam} vs ${m.strAwayTeam}`;
@@ -232,7 +241,6 @@ function populateMatchDropdown(matches) {
     });
 }
 
-// Helper: Inject Bootstrap Alert Banner
 function displayAlert(message, type) {
     alertBox.innerHTML = `
       <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">

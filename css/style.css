@@ -1,11 +1,29 @@
-/* Hero Header Styling */
+/* Custom Sports Hub Theme Variables */
+:root {
+  --primary-bg: #0f172a;
+  --card-bg: #1e293b;
+  --accent-blue: #38bdf8;
+}
+
+body {
+  background-color: #0b0f19;
+  color: #f8fafc;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+}
+
+/* Stadium Hero Section (Matches your HTML class) */
 .hero-section {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-bottom: 1px solid #334155;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(11, 15, 25, 0.95) 100%),
+              url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat !important;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;            
+  border-bottom: 2px solid #334155;
 }
 
 .hero-section .lead {
-  color: #94a3b8 !important;
+  color: #cbd5e1 !important;
 }
 
 /* Match Card Entrance Animation & Hover Effects */
@@ -21,15 +39,31 @@
 }
 
 .match-card {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px;
   animation: cardFadeIn 0.3s ease-in-out forwards;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  border-radius: 0.75rem;
 }
 
 .match-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08) !important;
-  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.2) !important;
+  border-color: #38bdf8 !important;
+}
+
+/* Team Badges & Crests */
+.team-badge {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+.score-badge {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 /* Floating Back to Top Button */
@@ -51,7 +85,8 @@
   transform: scale(1.08);
 }
 
-#back-to-top.hidden {
+.hidden {
+  display: none !important;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -60,17 +95,8 @@
 /* Input & Dropdown Focus States */
 .form-control:focus,
 .form-select:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-}
-
-/* Custom Status Badge Styling */
-.badge.bg-success-subtle {
-  background-color: #d1e7dd !important;
-  color: #0f5132 !important;
-}
-
-.badge.bg-warning-subtle {
-  background-color: #fff3cd !important;
-  color: #664d03 !important;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
+  background-color: #0f172a;
+  color: #fff;
 }
