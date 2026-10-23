@@ -1,9 +1,9 @@
-// Global State & Endpoints
-let matches = [], filtered = [], predictions = JSON.parse(localStorage.getItem('user_predictions')) || [], page = 1;
-const PER_PAGE = 6, POST_API = 'https://jsonplaceholder.typicode.com/posts';
+// Global State
+let matches = [], filtered = [], page = 1;
+const PER_PAGE = 6;
 const $ = id => document.getElementById(id);
 
-// Initializer
+// App Initialization
 document.addEventListener('DOMContentLoaded', () => {
   const leagueSel = $('select-league');
   fetchMatches(leagueSel ? leagueSel.value : '4328');
@@ -12,22 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $('search-team')?.addEventListener('input', applyFilters);
   $('select-status')?.addEventListener('change', applyFilters);
   $('load-more-btn')?.addEventListener('click', () => { page++; renderMatches(); });
-  $('prediction-form')?.addEventListener('submit', handlePredictionSubmit);
-  $('viewPredictionsModal')?.addEventListener('show.bs.modal', renderPredictions);
   $('standingsModal')?.addEventListener('show.bs.modal', loadLeagueStandings);
 
   $('back-to-top')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   window.addEventListener('scroll', () => $('back-to-top')?.classList.toggle('hidden', window.scrollY <= 250));
-
-  $('clear-predictions-btn')?.addEventListener('click', () => {
-    predictions = [];
-    localStorage.removeItem('user_predictions');
-    renderPredictions();
-    displayAlert('All predictions cleared.', 'info');
-  });
 });
 
-// Data Fetching & Filtering
+// Async Fixture Fetching
 async function fetchMatches(leagueId) {
   try {
     displayAlert('Loading matchday fixtures...', 'info');
@@ -40,11 +31,11 @@ async function fetchMatches(leagueId) {
   } catch {
     displayAlert('Error loading fixture data.', 'danger');
   } finally {
-    populateMatchDropdown();
     applyFilters();
   }
 }
 
+// Search & Filtering
 function applyFilters() {
   const query = ($('search-team')?.value || '').toLowerCase().trim();
   const status = $('select-status')?.value || 'all';
@@ -56,7 +47,7 @@ function applyFilters() {
   renderMatches();
 }
 
-// Rendering Functions
+// Match Cards Renderer
 function renderMatches() {
   const container = $('match-container');
   const loadBtn = $('load-more-btn');
@@ -64,7 +55,7 @@ function renderMatches() {
   if (page === 1) container.innerHTML = '';
 
   if (!filtered.length) {
-    container.innerHTML = `<div class="col-12 text-center py-5 text-white-50"><i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-warning"></i>No fixtures match your filters.</div>`;
+    container.innerHTML = `<div class="col-12 text-center py-5 text-white-50"><i class="bi bi-exclamation-circle fs-2 d-block mb-2 text-warning"></i>No fixtures match your selected filters.</div>`;
     loadBtn?.classList.add('d-none');
     return;
   }
@@ -106,68 +97,7 @@ function renderMatches() {
   }
 }
 
-// Prediction Handler
-async function handlePredictionSubmit(e) {
-  e.preventDefault();
-  const btn = $('submit-btn');
-  const name = $('user-name')?.value.trim();
-  const match = $('match-select')?.value;
-  const score = $('predicted-score')?.value.trim();
-
-  if (!name || !match || !score) {
-    alert('Please fill out all fields (Name, Match, and Predicted Score).');
-    return;
-  }
-
-  const payload = { id: Date.now(), user: name, match: match, prediction: score, createdAt: new Date().toISOString() };
-  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
-
-  // Save locally immediately
-  predictions.push(payload);
-  localStorage.setItem('user_predictions', JSON.stringify(predictions));
-
-  // Background POST attempt
-  fetch(POST_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
-
-  // Reset form
-  $('prediction-form')?.reset();
-
-  // Close modal reliably by triggering close button click
-  const closeBtn = document.querySelector('#predictionModal .btn-close');
-  if (closeBtn) {
-    closeBtn.click();
-  } else if (window.bootstrap) {
-    bootstrap.Modal.getOrCreateInstance($('predictionModal')).hide();
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = 'Submit Prediction'; }
-  displayAlert(`Prediction saved for ${match}!`, 'success');
-}
-
-function renderPredictions() {
-  const box = $('predictions-list-container');
-  if (!box) return;
-  if (!predictions.length) return box.innerHTML = `<div class="text-center py-4 text-white-50"><i class="bi bi-clipboard-x fs-1 d-block mb-2 text-warning"></i>No saved predictions in local storage.</div>`;
-
-  box.innerHTML = `
-    <div class="table-responsive">
-      <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-        <thead><tr class="text-info border-secondary"><th>#</th><th>User</th><th>Fixture</th><th>Predicted Score</th><th>Saved Date</th></tr></thead>
-        <tbody>
-          ${predictions.map((p, i) => `
-            <tr class="border-secondary">
-              <td class="fw-bold">${i + 1}</td>
-              <td>${p.user}</td>
-              <td><span class="badge bg-secondary">${p.match}</span></td>
-              <td><span class="badge bg-primary px-3 py-2 fs-6">${p.prediction}</span></td>
-              <td class="small text-white-50">${new Date(p.createdAt).toLocaleDateString()}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-// Standings & Helpers
+// Standings Loader
 async function loadLeagueStandings() {
   const box = $('standings-table-container');
   const leagueSel = $('select-league');
@@ -176,32 +106,61 @@ async function loadLeagueStandings() {
   const name = leagueSel.selectedOptions[0]?.text || 'League';
 
   try {
-    box.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-info"></div></div>`;
+    box.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-info" role="status"></div></div>`;
     const res = await fetch('js/standings.json');
+    if (!res.ok) throw new Error();
     const data = await res.json();
     const table = data[leagueId] || [];
 
-    if (!table.length) return box.innerHTML = `<div class="text-center py-4 text-white-50">No standings available.</div>`;
+    if (!table.length) {
+      box.innerHTML = `<div class="text-center py-4 text-white-50">No standings available for ${name}.</div>`;
+      return;
+    }
 
     box.innerHTML = `
-      <h6 class="text-info mb-3 fw-bold">${name} Table</h6>
-      <div class="table-responsive"><table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
-        <thead><tr class="text-secondary border-secondary"><th>Pos</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th class="text-info fw-bold">Pts</th></tr></thead>
-        <tbody>
-          ${table.map(s => `<tr class="border-secondary"><td class="fw-bold">${s.rank}</td><td class="fw-semibold text-white">${s.team}</td><td>${s.played}</td><td>${s.won}</td><td>${s.draw}</td><td>${s.loss}</td><td>${s.gd}</td><td class="text-info fw-bold fs-6">${s.points}</td></tr>`).join('')}
-        </tbody>
-      </table></div>`;
+      <h6 class="text-info mb-3 fw-bold">${name} Standings Table</h6>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+          <thead>
+            <tr class="text-secondary border-secondary">
+              <th>Pos</th>
+              <th>Team</th>
+              <th>P</th>
+              <th>W</th>
+              <th>D</th>
+              <th>L</th>
+              <th>GD</th>
+              <th class="text-info fw-bold">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${table.map(s => `
+              <tr class="border-secondary">
+                <td class="fw-bold">${s.rank}</td>
+                <td class="fw-semibold text-white">${s.team}</td>
+                <td>${s.played}</td>
+                <td>${s.won}</td>
+                <td>${s.draw}</td>
+                <td>${s.loss}</td>
+                <td>${s.gd}</td>
+                <td class="text-info fw-bold fs-6">${s.points}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
   } catch {
-    box.innerHTML = `<div class="text-center py-4 text-danger">Unable to load standings.</div>`;
+    box.innerHTML = `<div class="text-center py-4 text-danger">Unable to load standings table.</div>`;
   }
 }
 
-function populateMatchDropdown() {
-  const dd = $('match-select');
-  if (dd) dd.innerHTML = '<option value="" disabled selected>Select a fixture...</option>' + matches.map(m => `<option value="${m.strHomeTeam} vs ${m.strAwayTeam}">${m.strHomeTeam} vs ${m.strAwayTeam} (${m.strLeague})</option>`).join('');
-}
-
+// Alert
 function displayAlert(msg, type) {
   const box = $('alert-box');
-  if (box) box.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">${msg}<button type="button" class="btn-close" onclick="this.parentElement.remove()" aria-label="Close"></button></div>`;
+  if (box) {
+    box.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show shadow-sm" role="alert">
+        ${msg}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()" aria-label="Close"></button>
+      </div>`;
+  }
 }
