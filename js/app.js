@@ -3,7 +3,7 @@ let matches = [], filtered = [], page = 1;
 const PER_PAGE = 6;
 const $ = id => document.getElementById(id);
 
-// Hardcoded Standings Fallback
+// Hardcoded Standings Fallback (Guarantees data renders even on file:// protocol or CORS fetch blockades)
 const fallbackStandings = {
   "4328": [
     { "rank": 1, "team": "Manchester City", "played": 8, "won": 6, "draw": 1, "loss": 1, "gd": "+12", "points": 19 },
@@ -50,7 +50,19 @@ document.addEventListener('DOMContentLoaded', () => {
     standingsModal.addEventListener('show.bs.modal', loadLeagueStandings);
   }
 
-  document.querySelector('[data-bs-target="#standingsModal"]')?.addEventListener('click', loadLeagueStandings);
+  // Bind direct click triggers for all modals
+  document.querySelectorAll('[data-bs-target]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const targetId = btn.getAttribute('data-bs-target');
+      if (targetId === '#standingsModal') {
+        loadLeagueStandings();
+      }
+      const modalEl = document.querySelector(targetId);
+      if (modalEl && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      }
+    });
+  });
 
   $('back-to-top')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
   window.addEventListener('scroll', () => $('back-to-top')?.classList.toggle('hidden', window.scrollY <= 250));
